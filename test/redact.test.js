@@ -38,11 +38,27 @@ test("redacts authorization headers", () => {
   );
 });
 
+test("redacts JWTs without consuming adjacent text", () => {
+  const token = "eyJabcdefgh.abcdefgh.abcdefgh";
+  assert.equal(
+    redactText(`token=${token},next`).text,
+    "token=[REDACTED:JWT],next",
+  );
+});
+
 test("redacts credentials embedded in connection URLs", () => {
   const result = redactText("postgres://user:not-real-password@example.test/db");
   assert.equal(
     result.text,
     "postgres://user:[REDACTED:PASSWORD]@example.test/db",
+  );
+});
+
+test("treats Unicode whitespace as a connection-password boundary", () => {
+  const input = "postgres://user:password\u00a0tail@example.test/db";
+  assert.equal(
+    redactText(input).text,
+    "postgres://user:password\u00a0[REDACTED:EMAIL]/db",
   );
 });
 
@@ -77,6 +93,29 @@ test("redacts escaped private keys inside JSON", () => {
     redactText(input).text,
     '{"private_key":"[REDACTED:PRIVATE_KEY]","client_email":"[REDACTED:EMAIL]"}',
   );
+});
+
+test("preserves multiline and mixed-quote structured-key compatibility", () => {
+  const input = `{'private-key':"line one\nline two', "status":"ok"}`;
+  assert.equal(
+    redactText(input).text,
+    `{'private-key':"[REDACTED:PRIVATE_KEY]', "status":"ok"}`,
+  );
+});
+
+test("handles repeated incomplete candidates in bounded time", { timeout: 2000 }, () => {
+  const repeats = 10_000;
+  const inputs = [
+    "-----BEGIN PRIVATE KEY-----".repeat(repeats),
+    "eyJaaaaaaaa-".repeat(repeats),
+    "a://".repeat(repeats),
+    '{"private_key":"AAAA'.repeat(repeats),
+    "a@a".repeat(repeats),
+  ];
+
+  for (const input of inputs) {
+    assert.equal(redactText(input).count, 0);
+  }
 });
 
 test("redacts common personal identifiers", () => {

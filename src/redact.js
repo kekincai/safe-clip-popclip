@@ -60,19 +60,310 @@ function validIpv4(value) {
   );
 }
 
+function mergeRedaction(state, result) {
+  return { text: result.text, count: state.count + result.count };
+}
+
+function replaceSpans(text, spans, replacement) {
+  if (spans.length === 0) return { text, count: 0 };
+
+  let output = "";
+  let cursor = 0;
+  let count = 0;
+  for (const { start, end } of spans) {
+    if (start < cursor || end <= start) continue;
+    output += text.slice(cursor, start);
+    output += replacement;
+    cursor = end;
+    count += 1;
+  }
+  output += text.slice(cursor);
+  return { text: output, count };
+}
+
+function isAsciiLetter(character) {
+  return character !== undefined && /[A-Za-z]/.test(character);
+}
+
+function isAsciiWord(character) {
+  return character !== undefined && /[A-Za-z0-9_]/.test(character);
+}
+
+function isPrivateKeyMarker(markerText, kind) {
+  const match = /^-----(BEGIN|END)(?: [A-Z0-9]+)? PRIVATE KEY-----$/.exec(markerText);
+  return match?.[1] === kind;
+}
+
+function redactPrivateKeyBlocks(text, replacement) {
+  const markerPattern = /-----(?:BEGIN|END)(?: [A-Z0-9]+)? PRIVATE KEY-----/g;
+  const spans = [];
+  let openStart = -1;
+
+  for (const match of text.matchAll(markerPattern)) {
+    if (isPrivateKeyMarker(match[0], "BEGIN")) {
+      if (openStart === -1) openStart = match.index;
+    } else if (openStart !== -1) {
+      spans.push({ start: openStart, end: match.index + match[0].length });
+      openStart = -1;
+    }
+  }
+
+  return replaceSpans(text, spans, replacement);
+}
+
+function isJwtRunCharacter(character) {
+  return character !== undefined && /[A-Za-z0-9_.-]/.test(character);
+}
+
+function redactJwtTokens(text, replacement) {
+  const spans = [];
+  let runStart = 0;
+  let matchedUntil = 0;
+
+  while (runStart < text.length) {
+    while (runStart < text.length && !isJwtRunCharacter(text[runStart])) runStart += 1;
+    if (runStart >= text.length) break;
+
+    let runEnd = runStart;
+    while (runEnd < text.length && isJwtRunCharacter(text[runEnd])) runEnd += 1;
+
+    const segments = [];
+    let segmentStart = runStart;
+    for (let index = runStart; index <= runEnd; index += 1) {
+      if (index === runEnd || text[index] === ".") {
+        segments.push({ start: segmentStart, end: index });
+        segmentStart = index + 1;
+      }
+    }
+
+    for (let index = 0; index + 2 < segments.length; index += 1) {
+      const first = segments[index];
+      const second = segments[index + 1];
+      const third = segments[index + 2];
+      if (second.end - second.start < 8 || third.end - third.start < 8) continue;
+
+      let tokenStart = -1;
+      const searchStart = Math.max(first.start, matchedUntil);
+      for (let position = searchStart; position + 11 <= first.end; position += 1) {
+        if (
+          text.startsWith("eyJ", position) &&
+          (position === 0 || !isAsciiWord(text[position - 1]))
+        ) {
+          tokenStart = position;
+          break;
+        }
+      }
+      if (tokenStart === -1) continue;
+
+      let tokenEnd = third.end;
+      while (tokenEnd > third.start && text[tokenEnd - 1] === "-") tokenEnd -= 1;
+      if (
+        tokenEnd - third.start < 8 ||
+        !isAsciiWord(text[tokenEnd - 1]) ||
+        (tokenEnd < text.length && isAsciiWord(text[tokenEnd]))
+      ) {
+        continue;
+      }
+
+      spans.push({ start: tokenStart, end: tokenEnd });
+      matchedUntil = tokenEnd;
+    }
+
+    runStart = runEnd + 1;
+  }
+
+  return replaceSpans(text, spans, replacement);
+}
+
+function isSchemeCharacter(character) {
+  return character !== undefined && /[A-Za-z0-9+.-]/.test(character);
+}
+
+function findSchemeStart(text, runStart, runEnd) {
+  for (let index = runStart; index < runEnd; index += 1) {
+    if (
+      isAsciiLetter(text[index]) &&
+      (index === 0 || !isAsciiWord(text[index - 1]))
+    ) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function redactConnectionPasswords(text, replacement) {
+  const spans = [];
+  let searchFrom = 0;
+
+  while (searchFrom < text.length) {
+    const delimiter = text.indexOf("://", searchFrom);
+    if (delimiter === -1) break;
+
+    let schemeRunStart = delimiter;
+    while (schemeRunStart > 0 && isSchemeCharacter(text[schemeRunStart - 1])) {
+      schemeRunStart -= 1;
+    }
+    const schemeStart = findSchemeStart(text, schemeRunStart, delimiter);
+
+    const usernameStart = delimiter + 3;
+    let colon = usernameStart;
+    while (
+      colon < text.length &&
+      text[colon] !== "/" &&
+      text[colon] !== ":" &&
+      text[colon] !== "@" &&
+      !isWhitespace(text[colon])
+    ) {
+      colon += 1;
+    }
+
+    if (schemeStart !== -1 && colon > usernameStart && text[colon] === ":") {
+      const passwordStart = colon + 1;
+      let passwordEnd = passwordStart;
+      while (
+        passwordEnd < text.length &&
+        text[passwordEnd] !== "@" &&
+        text[passwordEnd] !== "/" &&
+        !isWhitespace(text[passwordEnd])
+      ) {
+        passwordEnd += 1;
+      }
+      if (passwordEnd > passwordStart && text[passwordEnd] === "@") {
+        spans.push({ start: passwordStart, end: passwordEnd });
+      }
+    }
+
+    searchFrom = delimiter + 3;
+  }
+
+  return replaceSpans(text, spans, replacement);
+}
+
+function isWhitespace(character) {
+  return character !== undefined && /\s/.test(character);
+}
+
+function structuredPrivateKeyValueStart(text, start) {
+  if (text[start] !== '"' && text[start] !== "'") return -1;
+
+  const rest = text.slice(start + 1, start + 12).toLowerCase();
+  const keyName = ["private_key", "private-key", "privatekey"].find((name) =>
+    rest.startsWith(name),
+  );
+  if (!keyName) return -1;
+
+  let cursor = start + 1 + keyName.length;
+  if (text[cursor] !== '"' && text[cursor] !== "'") return -1;
+  cursor += 1;
+  while (isWhitespace(text[cursor])) cursor += 1;
+  if (text[cursor] !== ":") return -1;
+  cursor += 1;
+  while (isWhitespace(text[cursor])) cursor += 1;
+  if (text[cursor] !== '"' && text[cursor] !== "'") return -1;
+  return cursor + 1;
+}
+
+function redactStructuredPrivateKeys(text, replacement) {
+  const spans = [];
+  let cursor = 0;
+
+  while (cursor < text.length) {
+    const valueStart = structuredPrivateKeyValueStart(text, cursor);
+    if (valueStart === -1) {
+      cursor += 1;
+      continue;
+    }
+
+    let valueEnd = valueStart;
+    while (valueEnd < text.length) {
+      if (text[valueEnd] === '"' || text[valueEnd] === "'") {
+        let afterQuote = valueEnd + 1;
+        while (isWhitespace(text[afterQuote])) afterQuote += 1;
+        if (text[afterQuote] === "," || text[afterQuote] === "}") break;
+      }
+      valueEnd += 1;
+    }
+
+    if (valueEnd === text.length) break;
+    spans.push({ start: valueStart, end: valueEnd });
+    cursor = valueEnd + 1;
+  }
+
+  return replaceSpans(text, spans, replacement);
+}
+
+function isEmailLocalCharacter(character) {
+  return character !== undefined && /[A-Za-z0-9._%+-]/.test(character);
+}
+
+function isEmailDomainCharacter(character) {
+  return character !== undefined && /[A-Za-z0-9.-]/.test(character);
+}
+
+function redactEmails(text, replacement) {
+  const spans = [];
+  let searchFrom = 0;
+
+  while (searchFrom < text.length) {
+    const at = text.indexOf("@", searchFrom);
+    if (at === -1) break;
+
+    let localRunStart = at;
+    while (localRunStart > 0 && isEmailLocalCharacter(text[localRunStart - 1])) {
+      localRunStart -= 1;
+    }
+
+    let emailStart = -1;
+    for (let index = localRunStart; index < at; index += 1) {
+      if (isAsciiWord(text[index]) && (index === 0 || !isAsciiWord(text[index - 1]))) {
+        emailStart = index;
+        break;
+      }
+    }
+
+    let domainEnd = at + 1;
+    while (domainEnd < text.length && isEmailDomainCharacter(text[domainEnd])) {
+      domainEnd += 1;
+    }
+
+    let emailEnd = -1;
+    if (emailStart !== -1) {
+      for (let dot = at + 2; dot < domainEnd; dot += 1) {
+        if (text[dot] !== ".") continue;
+        let tldEnd = dot + 1;
+        while (tldEnd < domainEnd && isAsciiLetter(text[tldEnd])) tldEnd += 1;
+        if (
+          tldEnd - (dot + 1) >= 2 &&
+          (tldEnd === text.length || !isAsciiWord(text[tldEnd]))
+        ) {
+          emailEnd = tldEnd;
+        }
+      }
+    }
+
+    if (emailEnd !== -1) {
+      spans.push({ start: emailStart, end: emailEnd });
+      searchFrom = emailEnd;
+    } else {
+      searchFrom = at + 1;
+    }
+  }
+
+  return replaceSpans(text, spans, replacement);
+}
+
 function redactStep(state, pattern, replacement) {
   const result = replace(state.text, pattern, replacement);
-  return { text: result.text, count: state.count + result.count };
+  return mergeRedaction(state, result);
 }
 
 export function redactText(input, rawOptions = {}) {
   const options = optionsWithDefaults(rawOptions);
   let state = { text: String(input ?? ""), count: 0 };
 
-  state = redactStep(
+  state = mergeRedaction(
     state,
-    /-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----[\s\S]*?-----END(?: [A-Z0-9]+)? PRIVATE KEY-----/g,
-    marker("PRIVATE_KEY", options),
+    redactPrivateKeyBlocks(state.text, marker("PRIVATE_KEY", options)),
   );
 
   state = redactStep(
@@ -81,10 +372,9 @@ export function redactText(input, rawOptions = {}) {
     marker("TOKEN", options),
   );
 
-  state = redactStep(
+  state = mergeRedaction(
     state,
-    /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g,
-    marker("JWT", options),
+    redactJwtTokens(state.text, marker("JWT", options)),
   );
 
   state = redactStep(
@@ -99,18 +389,14 @@ export function redactText(input, rawOptions = {}) {
     (_match, prefix) => `${prefix}${marker("BASIC_CREDENTIAL", options)}`,
   );
 
-  state = redactStep(
+  state = mergeRedaction(
     state,
-    /(\b[a-z][a-z0-9+.-]*:\/\/[^/\s:@]+:)([^@\s/]+)(@)/gi,
-    (_match, prefix, _password, suffix) =>
-      `${prefix}${marker("PASSWORD", options)}${suffix}`,
+    redactConnectionPasswords(state.text, marker("PASSWORD", options)),
   );
 
-  state = redactStep(
+  state = mergeRedaction(
     state,
-    /(["']private[_-]?key["']\s*:\s*["'])([\s\S]*?)(["'](?=\s*[,}]))/gi,
-    (_match, prefix, _value, suffix) =>
-      `${prefix}${marker("PRIVATE_KEY", options)}${suffix}`,
+    redactStructuredPrivateKeys(state.text, marker("PRIVATE_KEY", options)),
   );
 
   state = redactStep(
@@ -147,10 +433,9 @@ export function redactText(input, rawOptions = {}) {
   }
 
   if (options.redactEmails) {
-    state = redactStep(
+    state = mergeRedaction(
       state,
-      /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
-      marker("EMAIL", options),
+      redactEmails(state.text, marker("EMAIL", options)),
     );
   }
 
