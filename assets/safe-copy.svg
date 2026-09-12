@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Copy redacted text</title>
+  <path d="M11 9h30v9H20v29h-9V9Z" fill="#000"/>
+  <rect x="20" y="18" width="33" height="37" rx="4" fill="none" stroke="#000" stroke-width="6"/>
+  <path d="M28 31h17M28 41h17" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+</svg>

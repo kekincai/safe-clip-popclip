@@ -5,7 +5,7 @@ import {
   luhnValid,
   redactText,
   validIpv4,
-} from "../SafeClip.popclipext/redact.js";
+} from "../src/redact.js";
 
 test("redacts known API token formats", () => {
   const input = "OPENAI_KEY=sk-proj-abcdefghijklmnopqrstuvwxyz012345";

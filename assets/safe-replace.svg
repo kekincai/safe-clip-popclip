@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Replace with redacted text</title>
+  <path d="M10 18h34l-7-7M54 46H20l7 7" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m44 18-7 7M20 46l7-7" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round"/>
+  <path d="M18 32h28" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round"/>
+</svg>

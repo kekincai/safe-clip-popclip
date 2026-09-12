@@ -3,14 +3,14 @@
 [![CI](https://github.com/kekincai/safe-clip-popclip/actions/workflows/ci.yml/badge.svg)](https://github.com/kekincai/safe-clip-popclip/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/kekincai/safe-clip-popclip)](https://github.com/kekincai/safe-clip-popclip/releases/latest)
 
-Safe Clip redacts common secrets and personal data from selected text before you copy or replace it. Processing happens locally inside PopClip: the extension has no network entitlement, does not read files, and does not store the selected text.
+Safe Clip provides two independent PopClip extensions that redact common secrets and personal data. Processing happens locally inside PopClip: neither extension has a network entitlement, reads files, or stores the selected text.
 
 ## Actions
 
-- **Copy** copies a sanitized version while leaving the source text unchanged.
-- **Replace** replaces the current selection with its sanitized version.
+- **safeCopy** copies a sanitized version while leaving the source text unchanged.
+- **safeReplace** replaces the current selection with its sanitized version.
 
-Both actions use the extension's custom redaction-shield icon, with short tooltip names and no repeated “Safe Clip” action prefix.
+They are separate single-action packages, so PopClip shows their exact names without adding a shared “Safe Clip” action prefix. Their custom icons distinguish overlapping documents for copying from opposing arrows for replacement.
 
 Secrets are always checked. Optional categories are enabled by default and can be changed in PopClip's extension settings.
 
@@ -29,18 +29,18 @@ Safe Clip uses deterministic pattern matching. It can miss unusual formats or re
 
 ## Install
 
-1. Download `SafeClip.popclipextz` from the [latest release](https://github.com/kekincai/safe-clip-popclip/releases/latest).
-2. Double-click the downloaded package in Finder.
-3. Review PopClip's installation prompt and enable the actions you want. PopClip may warn that a directly distributed community extension is unsigned.
+1. Download `safeCopy.popclipextz` and/or `safeReplace.popclipextz` from the [latest release](https://github.com/kekincai/safe-clip-popclip/releases/latest).
+2. Double-click each downloaded package in Finder.
+3. Review PopClip's installation prompt. PopClip may warn that a directly distributed community extension is unsigned.
 
-During development, run the tests first and then double-click the package to reinstall it.
+During development, run `npm run check`, then install the generated packages from `dist/`.
 
 ## Privacy and security
 
 - No network entitlement is requested.
 - No API key or account is required.
 - No selected text is logged or persisted by the extension.
-- Copy is recommended when you do not want to modify the source document.
+- safeCopy is recommended when you do not want to modify the source document.
 - Pattern matching is a safety aid, not a guarantee that a document is anonymous.
 
 See [SECURITY.md](SECURITY.md) for private vulnerability reporting guidance and the supported security scope.
@@ -50,17 +50,18 @@ See [SECURITY.md](SECURITY.md) for private vulnerability reporting guidance and 
 The redaction engine is plain JavaScript so it can be tested with Node.js and imported by PopClip's TypeScript configuration.
 
 ```bash
-npm test
+npm run check
 ```
 
 Repository layout:
 
 ```text
-SafeClip.popclipext/
-  Config.ts       PopClip metadata, options and actions
-  redact.js       Local redaction engine
-test/
-  redact.test.js  Node test suite
+assets/           Distinct SVG icons
+extensions/       PopClip configs for safeCopy and safeReplace
+src/redact.js     Shared local redaction engine
+scripts/build.mjs Reproducible package builder
+test/             Node test suite
+dist/             Generated installable packages, not committed
 ```
 
 ## Contributing
