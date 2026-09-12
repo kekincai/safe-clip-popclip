@@ -1,0 +1,34 @@
+name: Bug report
+description: Report a Safe Clip detection or behavior problem using synthetic data only.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include real secrets, personal information, financial data or private documents.
+  - type: textarea
+    id: input
+    attributes:
+      label: Synthetic input
+      description: Use a made-up value that preserves only the relevant format.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual output
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: PopClip and macOS versions
+    validations:
+      required: true
