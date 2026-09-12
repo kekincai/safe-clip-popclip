@@ -1,5 +1,8 @@
 # Safe Clip for PopClip
 
+[![CI](https://github.com/kekincai/safe-clip-popclip/actions/workflows/ci.yml/badge.svg)](https://github.com/kekincai/safe-clip-popclip/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/kekincai/safe-clip-popclip)](https://github.com/kekincai/safe-clip-popclip/releases/latest)
+
 Safe Clip redacts common secrets and personal data from selected text before you copy or replace it. Processing happens locally inside PopClip: the extension has no network entitlement, does not read files, and does not store the selected text.
 
 ## Actions
@@ -24,9 +27,9 @@ Safe Clip uses deterministic pattern matching. It can miss unusual formats or re
 
 ## Install
 
-1. Download or clone this repository.
-2. Double-click `SafeClip.popclipext` in Finder.
-3. Review PopClip's installation prompt and enable the actions you want.
+1. Download `SafeClip.popclipextz` from the [latest release](https://github.com/kekincai/safe-clip-popclip/releases/latest).
+2. Double-click the downloaded package in Finder.
+3. Review PopClip's installation prompt and enable the actions you want. PopClip may warn that a directly distributed community extension is unsigned.
 
 During development, run the tests first and then double-click the package to reinstall it.
 
