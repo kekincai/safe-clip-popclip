@@ -1,0 +1,15 @@
+{
+  "name": "safe-clip-popclip",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A local-first redaction extension for PopClip.",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check SafeClip.popclipext/redact.js && node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
