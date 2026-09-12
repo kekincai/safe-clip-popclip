@@ -33,7 +33,7 @@ Safe Clip uses deterministic pattern matching. It can miss unusual formats or re
 2. Double-click each downloaded package in Finder.
 3. Review PopClip's installation prompt. PopClip may warn that a directly distributed community extension is unsigned.
 
-During development, run `npm run check`, then install the generated packages from `dist/`.
+During development, edit the canonical engine in `src/redact.js`, run `npm run sync`, then run `npm run check`. Install the generated packages from `dist/`.
 
 ## Privacy and security
 
@@ -56,12 +56,13 @@ npm run check
 Repository layout:
 
 ```text
-assets/           Distinct SVG icons
-extensions/       PopClip configs for safeCopy and safeReplace
-src/redact.js     Shared local redaction engine
-scripts/build.mjs Reproducible package builder
-test/             Node test suite
-dist/             Generated installable packages, not committed
+extensions/                 Directory-ready `.popclipext` source packages
+src/redact.js               Canonical local redaction engine
+scripts/sync-packages.mjs   Keeps both package copies synchronized
+scripts/build.mjs           Reproducible `.popclipextz` builder
+popclip-directory.yaml      Official directory submission configuration
+test/                       Node test suite
+dist/                       Generated installable packages, not committed
 ```
 
 ## Contributing

@@ -1,0 +1,4 @@
+include:
+  - "extensions/safeCopy.popclipext"
+  - "extensions/safeReplace.popclipext"
+versionPrefix: v
