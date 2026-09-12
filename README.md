@@ -7,8 +7,10 @@ Safe Clip redacts common secrets and personal data from selected text before you
 
 ## Actions
 
-- **Copy Safe** copies a sanitized version while leaving the source text unchanged.
-- **Replace Safe** replaces the current selection with its sanitized version.
+- **Copy** copies a sanitized version while leaving the source text unchanged.
+- **Replace** replaces the current selection with its sanitized version.
+
+Both actions use the extension's custom redaction-shield icon, with short tooltip names and no repeated “Safe Clip” action prefix.
 
 Secrets are always checked. Optional categories are enabled by default and can be changed in PopClip's extension settings.
 
@@ -38,7 +40,7 @@ During development, run the tests first and then double-click the package to rei
 - No network entitlement is requested.
 - No API key or account is required.
 - No selected text is logged or persisted by the extension.
-- Copy Safe is recommended when you do not want to modify the source document.
+- Copy is recommended when you do not want to modify the source document.
 - Pattern matching is a safety aid, not a guarantee that a document is anonymous.
 
 See [SECURITY.md](SECURITY.md) for private vulnerability reporting guidance and the supported security scope.

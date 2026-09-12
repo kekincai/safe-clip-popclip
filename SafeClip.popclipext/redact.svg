@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Redaction shield</title>
+  <path
+    d="M32 4 53 12v16c0 14-8.4 25.2-21 32C19.4 53.2 11 42 11 28V12L32 4Z"
+    fill="none"
+    stroke="#000"
+    stroke-width="6"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M18 28h28M18 36h28"
+    fill="none"
+    stroke="#000"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
+</svg>

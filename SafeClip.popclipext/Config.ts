@@ -4,7 +4,8 @@
 // popclipVersion: 6221
 // description: Redact secrets and personal data locally before copying or replacing selected text.
 // keywords: redact privacy secret token password pii sanitize
-// icon: symbol:hand.raised.fill
+// icon: redact.svg
+// showAs: icon
 
 import { redactText } from "./redact.js";
 
@@ -59,16 +60,14 @@ defineExtension<SafeClipOptions>({
   options: safeClipOptions,
   actions: [
     {
-      title: "Copy Safe",
-      icon: "symbol:doc.on.doc.fill",
+      title: "Copy",
       requirements: ["text"],
       code: async (input, options) => {
         await popclip.copyText(sanitize(input, options));
       },
     },
     {
-      title: "Replace Safe",
-      icon: "symbol:rectangle.and.pencil.and.ellipsis",
+      title: "Replace",
       requirements: ["text", "paste"],
       code: async (input, options) => {
         await popclip.pasteText(sanitize(input, options));
